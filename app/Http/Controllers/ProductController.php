@@ -168,6 +168,15 @@ class ProductController extends Controller
     }
 
     /**
+     * Alias for legacy route name: byCategory
+     * Some routes call byCategory(), keep backward compatibility.
+     */
+    public function byCategory($category)
+    {
+        return $this->category($category);
+    }
+
+    /**
      * Search products API endpoint
      */
     public function search(Request $request)

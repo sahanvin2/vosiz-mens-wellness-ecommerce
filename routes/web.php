@@ -392,9 +392,7 @@ Route::get('/seed-mongo-products', function () {
 Route::get('/categories', [App\Http\Controllers\CategoryController::class, 'index'])->name('categories.index');
 Route::get('/categories/{category:slug}', [App\Http\Controllers\CategoryController::class, 'show'])->name('categories.show');
 
-// Product Routes
-Route::get('/products', [App\Http\Controllers\ProductController::class, 'index'])->name('products.index');
-Route::get('/products/{product:slug}', [App\Http\Controllers\ProductController::class, 'show'])->name('products.show');
+// Product Routes are defined in the grouped '/products' prefix above to avoid duplicates
 
 Route::middleware([
     'auth:sanctum',
