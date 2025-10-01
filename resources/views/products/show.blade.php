@@ -44,13 +44,13 @@
                         <!-- Thumbnail Images (Left) -->
                         <div class="flex flex-col space-y-3 w-20">
                             @if(!empty($product->images) && isset($product->images[0]))
-                                <div class="w-20 h-20 bg-gray-800 rounded-lg overflow-hidden cursor-pointer border-2 border-yellow-400 thumbnail-container" onclick="changeMainImage('{{ asset('storage/' . $product->images[0]) }}')">
+                                <div class="w-20 h-20 bg-gray-800 rounded-lg overflow-hidden cursor-pointer border-2 border-yellow-400 thumbnail-container" data-image="{{ asset('storage/' . $product->images[0]) }}" onclick="changeMainImage(this.dataset.image)">
                                     <img src="{{ asset('storage/' . $product->images[0]) }}" alt="{{ $product->name }}" class="w-full h-full object-cover">
                                 </div>
                             @endif
                             @if(!empty($product->images))
                                 @foreach(array_slice($product->images, 1, 4) as $image)
-                                <div class="w-20 h-20 bg-gray-800 rounded-lg overflow-hidden cursor-pointer border border-gray-700 thumbnail-container" onclick="changeMainImage('{{ asset('storage/' . $image) }}')">
+                                <div class="w-20 h-20 bg-gray-800 rounded-lg overflow-hidden cursor-pointer border border-gray-700 thumbnail-container" data-image="{{ asset('storage/' . $image) }}" onclick="changeMainImage(this.dataset.image)">
                                     <img src="{{ asset('storage/' . $image) }}" alt="{{ $product->name }}" class="w-full h-full object-cover">
                                 </div>
                                 @endforeach
@@ -110,9 +110,9 @@
                     <div class="bg-gray-900 rounded-xl p-6 mb-6 border border-gray-800">
                         <div class="mb-4">
                             <div class="flex items-baseline space-x-3">
-                                <span class="text-4xl font-bold text-yellow-400">${{ number_format($product->price, 2) }}</span>
+                                <span class="text-4xl font-bold text-yellow-400">${{ number_format((float)$product->price, 2) }}</span>
                                 @if($product->compare_price && $product->compare_price > $product->price)
-                                    <span class="text-lg text-gray-400 line-through">${{ number_format($product->compare_price, 2) }}</span>
+                                    <span class="text-lg text-gray-400 line-through">${{ number_format((float)$product->compare_price, 2) }}</span>
                                 @endif
                             </div>
                             @if($product->compare_price && $product->compare_price > $product->price)
@@ -180,7 +180,7 @@
                                                    max="{{ $product->stock_quantity }}" 
                                                    value="1"
                                                    class="w-16 px-3 py-3 bg-gray-800 text-white text-center border-none focus:outline-none">
-                                            <button type="button" class="px-4 py-3 text-white hover:bg-gray-700 rounded-r-lg transition-colors" onclick="increaseQuantity({{ $product->stock_quantity }})">
+                                            <button type="button" class="px-4 py-3 text-white hover:bg-gray-700 rounded-r-lg transition-colors" data-max-stock="{{ $product->stock_quantity }}" onclick="increaseQuantity(this.dataset.maxStock)">
                                                 <i class="fas fa-plus"></i>
                                             </button>
                                         </div>
@@ -454,7 +454,7 @@
                                         <i class="fas fa-star {{ $i <= 4 ? 'text-yellow-400' : 'text-gray-600' }} text-xs"></i>
                                     @endfor
                                 </div>
-                                <div class="text-yellow-400 font-bold text-sm">${{ number_format($relatedProduct->price, 2) }}</div>
+                                <div class="text-yellow-400 font-bold text-sm">${{ number_format((float)$relatedProduct->price, 2) }}</div>
                             </div>
                         </a>
                     </div>

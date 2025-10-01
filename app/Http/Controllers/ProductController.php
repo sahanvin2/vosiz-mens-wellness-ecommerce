@@ -3,140 +3,139 @@
 namespace App\Http\Controllers;
 
 use App\Models\MongoDBProduct;
-use App\Models\Category;
 use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
     /**
-     * Display a listing of all products for customers
+     * Display products for customers
      */
     public function index(Request $request)
     {
-        $query = MongoDBProduct::where('is_active', true);
+        $query = MongoDBProduct::query();
         
-        // Filter by category if provided
-        if ($request->filled('category')) {
-            $query->where('category_id', $request->category);
-        }
-        
+        // Filter active products if the field exists
+        $query->where(function($q) {
+            $q->where('is_active', true)
+              ->orWhereNull('is_active'); // Include products where is_active is null (for backward compatibility)
+        });
+
         // Search functionality
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
-                $q->where('name', 'like', '%' . $search . '%')
-                  ->orWhere('description', 'like', '%' . $search . '%')
-                  ->orWhere('tags', 'like', '%' . $search . '%');
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%")
+                  ->orWhere('tags', 'like', "%{$search}%");
             });
         }
-        
+
+        // Category filter
+        if ($request->filled('category')) {
+            $query->where('category', $request->category);
+        }
+
+        // Price range filter
+        if ($request->filled('min_price')) {
+            $query->where('price', '>=', $request->min_price);
+        }
+        if ($request->filled('max_price')) {
+            $query->where('price', '<=', $request->max_price);
+        }
+
         // Sort options
-        $sort = $request->get('sort', 'newest');
-        switch ($sort) {
+        $sortBy = $request->get('sort', 'name');
+        
+        switch ($sortBy) {
             case 'price_low':
                 $query->orderBy('price', 'asc');
                 break;
             case 'price_high':
                 $query->orderBy('price', 'desc');
                 break;
-            case 'name':
-                $query->orderBy('name', 'asc');
+            case 'newest':
+                $query->orderBy('created_at', 'desc');
                 break;
             case 'featured':
                 $query->orderBy('is_featured', 'desc')->orderBy('created_at', 'desc');
                 break;
-            default: // newest
-                $query->orderBy('created_at', 'desc');
-                break;
+            default:
+                $query->orderBy($sortBy, 'asc');
         }
-        
+
         $products = $query->paginate(12);
         
-        // Get categories for filter
-        $categories = Category::where('is_active', true)
-            ->orderBy('name')
-            ->get();
+        // Get available categories for filter
+        $allProducts = MongoDBProduct::whereNotNull('category')->get();
+        $categoryNames = $allProducts->pluck('category')->unique()->filter()->sort();
             
-        // Get featured products for homepage
-        $featuredProducts = MongoDBProduct::where('is_featured', true)
-            ->where('is_active', true)
-            ->limit(6)
-            ->get();
-            
-        return view('products.index', compact('products', 'categories', 'featuredProducts'));
+        // Create category objects for the view
+        $categories = $categoryNames->map(function($categoryName) {
+            return (object) [
+                'id' => $categoryName,
+                'name' => ucfirst(str_replace('-', ' ', $categoryName)),
+                'slug' => $categoryName
+            ];
+        });
+
+        return view('products.index', compact('products', 'categories'));
     }
 
     /**
-     * Display the specified product details
+     * Display single product
      */
-    public function show($id)
+    public function show($slug)
     {
-        try {
-            $product = MongoDBProduct::findOrFail($id);
-            
-            if (!$product->is_active) {
-                abort(404, 'Product not found');
-            }
-            
-            // Get related products from same category
-            $relatedProducts = MongoDBProduct::where('category_name', $product->category_name)
-                ->where('_id', '!=', $product->_id)
-                ->where('is_active', true)
-                ->limit(4)
-                ->get();
-                
-            return view('products.show', compact('product', 'relatedProducts'));
-            
-        } catch (\Exception $e) {
-            abort(404, 'Product not found');
-        }
+        $product = MongoDBProduct::where('slug', $slug)
+            ->where('is_active', true)
+            ->firstOrFail();
+
+        // Get related products
+        $relatedProducts = MongoDBProduct::where('category', $product->category)
+            ->where('_id', '!=', $product->_id)
+            ->where('is_active', true)
+            ->limit(4)
+            ->get();
+
+        return view('products.show', compact('product', 'relatedProducts'));
     }
 
     /**
      * Get products by category
      */
-    public function byCategory($categoryId)
+    public function category($category)
     {
-        $category = Category::findOrFail($categoryId);
-        
-        $products = MongoDBProduct::where('category_id', $categoryId)
+        $products = MongoDBProduct::where('category', $category)
             ->where('is_active', true)
-            ->orderBy('created_at', 'desc')
+            ->orderBy('sort_order', 'asc')
             ->paginate(12);
-            
-        $categories = Category::where('is_active', true)
-            ->orderBy('name')
-            ->get();
-            
-        return view('products.category', compact('products', 'categories', 'category'));
+
+        $categoryName = ucfirst(str_replace('-', ' ', $category));
+
+        return view('products.category', compact('products', 'category', 'categoryName'));
     }
 
     /**
-     * Search products
+     * Search products API endpoint
      */
     public function search(Request $request)
     {
-        $search = $request->get('q', '');
-        $categoryId = $request->get('category');
+        $search = $request->get('q');
         
-        $query = MongoDBProduct::where('is_active', true);
-        
-        if (!empty($search)) {
-            $query->where(function($q) use ($search) {
-                $q->where('name', 'like', '%' . $search . '%')
-                  ->orWhere('description', 'like', '%' . $search . '%')
-                  ->orWhere('category_name', 'like', '%' . $search . '%');
-            });
+        if (empty($search)) {
+            return response()->json([]);
         }
-        
-        if ($categoryId) {
-            $query->where('category_id', $categoryId);
-        }
-        
-        $products = $query->orderBy('created_at', 'desc')->paginate(12);
-        $categories = Category::where('is_active', true)->orderBy('name')->get();
-        
-        return view('products.search', compact('products', 'categories', 'search'));
+
+        $products = MongoDBProduct::where('is_active', true)
+            ->where(function($query) use ($search) {
+                $query->where('name', 'like', "%{$search}%")
+                      ->orWhere('description', 'like', "%{$search}%")
+                      ->orWhere('tags', 'like', "%{$search}%");
+            })
+            ->limit(10)
+            ->get(['name', 'slug', 'price', 'images']);
+
+        return response()->json($products);
     }
 
     /**
@@ -144,12 +143,12 @@ class ProductController extends Controller
      */
     public function featured()
     {
-        $products = MongoDBProduct::where('is_featured', true)
+        $featuredProducts = MongoDBProduct::where('is_featured', true)
             ->where('is_active', true)
-            ->orderBy('created_at', 'desc')
-            ->limit(8)
+            ->orderBy('sort_order', 'asc')
+            ->limit(6)
             ->get();
-            
-        return view('products.featured', compact('products'));
+
+        return view('products.featured', compact('featuredProducts'));
     }
 }

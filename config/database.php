@@ -108,11 +108,17 @@ return [
             'password' => env('MONGO_DB_PASSWORD'),
             'options' => [
                 'database' => env('MONGO_DB_AUTHENTICATION_DATABASE', 'admin'),
-                'ssl' => env('MONGO_DB_SSL', false),
+                'retryWrites' => true,
+                'w' => 'majority',
+                'maxPoolSize' => 10,
+                'serverSelectionTimeoutMS' => 5000,
+                'connectTimeoutMS' => 10000,
+                'socketTimeoutMS' => 5000,
             ],
+            'ssl' => env('MONGO_DB_SSL', false),
         ],
 
-                'sqlsrv' => [
+        'sqlsrv' => [
             'driver' => 'sqlsrv',
             'url' => env('DB_URL'),
             'host' => env('DB_HOST', 'localhost'),

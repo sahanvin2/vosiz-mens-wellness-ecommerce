@@ -110,21 +110,21 @@
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                         <div class="flex items-center space-x-2">
-                                            <button onclick="viewOrder({{ $orderItem->order->id }})" class="text-green-400 hover:text-green-300 p-1" title="View Order">
+                                            <button data-order-id="{{ $orderItem->order->id }}" onclick="viewOrder(this.dataset.orderId)" class="text-green-400 hover:text-green-300 p-1" title="View Order">
                                                 <i class="fas fa-eye"></i>
                                             </button>
                                             @if($orderItem->order->status === 'pending')
-                                            <button onclick="updateOrderStatus({{ $orderItem->order->id }}, 'processing')" class="text-blue-400 hover:text-blue-300 p-1" title="Mark as Processing">
+                                            <button data-order-id="{{ $orderItem->order->id }}" onclick="updateOrderStatus(this.dataset.orderId, 'processing')" class="text-blue-400 hover:text-blue-300 p-1" title="Mark as Processing">
                                                 <i class="fas fa-play"></i>
                                             </button>
                                             @endif
                                             @if($orderItem->order->status === 'processing')
-                                            <button onclick="updateOrderStatus({{ $orderItem->order->id }}, 'shipped')" class="text-purple-400 hover:text-purple-300 p-1" title="Mark as Shipped">
+                                            <button data-order-id="{{ $orderItem->order->id }}" onclick="updateOrderStatus(this.dataset.orderId, 'shipped')" class="text-purple-400 hover:text-purple-300 p-1" title="Mark as Shipped">
                                                 <i class="fas fa-shipping-fast"></i>
                                             </button>
                                             @endif
                                             @if(in_array($orderItem->order->status, ['pending', 'processing']))
-                                            <button onclick="updateOrderStatus({{ $orderItem->order->id }}, 'cancelled')" class="text-red-400 hover:text-red-300 p-1" title="Cancel Order">
+                                            <button data-order-id="{{ $orderItem->order->id }}" onclick="updateOrderStatus(this.dataset.orderId, 'cancelled')" class="text-red-400 hover:text-red-300 p-1" title="Cancel Order">
                                                 <i class="fas fa-times"></i>
                                             </button>
                                             @endif

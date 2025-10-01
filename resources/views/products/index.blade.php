@@ -152,7 +152,7 @@
                                 
                                 @auth
                                     @if(($product->stock_quantity ?? 0) > 0)
-                                        <button onclick="addToCart('{{ $product->_id }}')" class="bg-transparent border border-vosiz-gold text-vosiz-gold px-4 py-3 rounded-lg font-semibold hover:bg-vosiz-gold hover:text-black transition-colors transform hover:scale-105">
+                                        <button data-product-id="{{ $product->_id }}" onclick="addToCart(this.dataset.productId)" class="bg-transparent border border-vosiz-gold text-vosiz-gold px-4 py-3 rounded-lg font-semibold hover:bg-vosiz-gold hover:text-black transition-colors transform hover:scale-105">
                                             <i class="fas fa-shopping-cart"></i>
                                         </button>
                                     @else

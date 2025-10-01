@@ -302,7 +302,7 @@ Route::get('/admin-test', function () {
         $testProduct = new App\Models\MongoDBProduct();
         $testProduct->name = 'Test MongoDB Product';
         $testProduct->description = 'This is a test product to verify MongoDB storage';
-        $testProduct->price = '29.99';
+        $testProduct->setAttribute('price', '29.99');
         $testProduct->stock_quantity = 100;
         $testProduct->category_id = 1;
         $testProduct->category_name = 'Skincare';
@@ -474,6 +474,30 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
     })->name('mongo-products');
     
 
+});
+
+// Shop Routes (Customer)
+Route::prefix('shop')->name('shop.')->group(function () {
+    Route::get('/', [App\Http\Controllers\ShopController::class, 'index'])->name('index');
+    Route::get('/product/{slug}', [App\Http\Controllers\ShopController::class, 'show'])->name('product');
+    Route::post('/cart/add/{slug}', [App\Http\Controllers\ShopController::class, 'addToCart'])->name('cart.add');
+    Route::get('/cart', [App\Http\Controllers\ShopController::class, 'cart'])->name('cart');
+    Route::post('/cart/update', [App\Http\Controllers\ShopController::class, 'updateCart'])->name('cart.update');
+    Route::delete('/cart/{slug}', [App\Http\Controllers\ShopController::class, 'removeFromCart'])->name('cart.remove');
+    
+    // Checkout routes (requires authentication)
+    Route::middleware('auth')->group(function () {
+        Route::get('/checkout', [App\Http\Controllers\ShopController::class, 'checkout'])->name('checkout');
+        Route::post('/checkout', [App\Http\Controllers\ShopController::class, 'processCheckout'])->name('checkout.process');
+        Route::get('/order-success/{orderId}', [App\Http\Controllers\ShopController::class, 'orderSuccess'])->name('order-success');
+    });
+});
+
+// Admin Product Management Routes
+Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+    // Add these new product management routes
+    Route::resource('products', App\Http\Controllers\Admin\AdminProductController::class);
+    Route::delete('/products/{id}/image', [App\Http\Controllers\Admin\AdminProductController::class, 'removeImage'])->name('products.remove-image');
 });
 
 // Supplier Routes

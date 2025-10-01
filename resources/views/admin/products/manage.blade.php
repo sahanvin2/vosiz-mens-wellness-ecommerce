@@ -155,7 +155,7 @@
                                         <span class="text-gray-300">{{ $product->category_name ?? 'No Category' }}</span>
                                     </td>
                                     <td class="px-6 py-4">
-                                        <div class="text-white font-medium">${{ number_format($product->price ?? 0, 2) }}</div>
+                                        <div class="text-white font-medium">${{ number_format((float)($product->price ?? 0), 2) }}</div>
                                         @if(isset($product->compare_price) && $product->compare_price > ($product->price ?? 0))
                                             <div class="text-sm text-gray-400 line-through">${{ number_format($product->compare_price, 2) }}</div>
                                         @endif

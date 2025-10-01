@@ -35,7 +35,7 @@
                                 <h3 class="text-white font-semibold text-lg mb-2">{{ $product->name }}</h3>
                                 <p class="text-gray-400 text-sm mb-3 line-clamp-2">{{ Str::limit($product->description, 100) }}</p>
                                 <div class="flex items-center justify-between mb-3">
-                                    <span class="text-yellow-400 font-bold text-lg">${{ number_format($product->price, 2) }}</span>
+                                    <span class="text-yellow-400 font-bold text-lg">${{ number_format((float)$product->price, 2) }}</span>
                                     <span class="text-sm px-2 py-1 rounded {{ $product->is_active ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400' }}">
                                         {{ $product->is_active ? 'Active' : 'Inactive' }}
                                     </span>

@@ -102,7 +102,7 @@
                         </td>
                         <td class="px-6 py-4 text-gray-300">{{ $product->category_name }}</td>
                         <td class="px-6 py-4">
-                            <div class="text-white font-semibold">${{ number_format($product->price, 2) }}</div>
+                            <div class="text-white font-semibold">${{ number_format((float)$product->price, 2) }}</div>
                             @if($product->sale_price)
                                 <div class="text-green-400 text-sm">
                                     Sale: ${{ number_format($product->sale_price, 2) }}

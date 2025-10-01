@@ -23,7 +23,7 @@
                         </div>
                         <div class="ml-4">
                             <p class="text-sm font-medium text-gray-400">Total Orders</p>
-                            <p class="text-2xl font-bold text-white">{{ $stats['total_orders'] }}</p>
+                            <p class="text-2xl font-bold text-white">{{ $stats['total_orders'] ?? 0 }}</p>
                         </div>
                     </div>
                 </div>
@@ -35,7 +35,7 @@
                         </div>
                         <div class="ml-4">
                             <p class="text-sm font-medium text-gray-400">Pending</p>
-                            <p class="text-2xl font-bold text-white">{{ $stats['pending_orders'] }}</p>
+                            <p class="text-2xl font-bold text-white">{{ $stats['pending_orders'] ?? 0 }}</p>
                         </div>
                     </div>
                 </div>
@@ -47,7 +47,7 @@
                         </div>
                         <div class="ml-4">
                             <p class="text-sm font-medium text-gray-400">Processing</p>
-                            <p class="text-2xl font-bold text-white">{{ $stats['processing_orders'] }}</p>
+                            <p class="text-2xl font-bold text-white">{{ $stats['processing_orders'] ?? 0 }}</p>
                         </div>
                     </div>
                 </div>
@@ -59,7 +59,7 @@
                         </div>
                         <div class="ml-4">
                             <p class="text-sm font-medium text-gray-400">Completed</p>
-                            <p class="text-2xl font-bold text-white">{{ $stats['completed_orders'] }}</p>
+                            <p class="text-2xl font-bold text-white">{{ $stats['completed_orders'] ?? 0 }}</p>
                         </div>
                     </div>
                 </div>
@@ -71,7 +71,7 @@
                         </div>
                         <div class="ml-4">
                             <p class="text-sm font-medium text-gray-400">Total Revenue</p>
-                            <p class="text-2xl font-bold text-white">${{ number_format($stats['total_revenue'], 2) }}</p>
+                            <p class="text-2xl font-bold text-white">${{ number_format($stats['total_revenue'] ?? 0, 2) }}</p>
                         </div>
                     </div>
                 </div>
@@ -83,7 +83,7 @@
                     <h2 class="text-xl font-semibold text-white">All Orders</h2>
                 </div>
 
-                @if($orders->count() > 0)
+                @if(isset($orders) && $orders->count() > 0)
                     <div class="overflow-x-auto">
                         <table class="w-full">
                             <thead class="bg-gray-700/50">
@@ -102,7 +102,7 @@
                                 @foreach($orders as $order)
                                 <tr class="hover:bg-gray-700/30 transition-colors">
                                     <td class="px-6 py-4">
-                                        <span class="font-mono text-yellow-400 font-medium">{{ $order->order_number }}</span>
+                                        <span class="font-mono text-yellow-400 font-medium">{{ $order->order_number ?? 'N/A' }}</span>
                                     </td>
                                     <td class="px-6 py-4">
                                         <div>
@@ -111,10 +111,10 @@
                                         </div>
                                     </td>
                                     <td class="px-6 py-4">
-                                        <span class="text-white">{{ $order->items->count() }} items</span>
+                                        <span class="text-white">{{ $order->items ? $order->items->count() : 0 }} items</span>
                                     </td>
                                     <td class="px-6 py-4">
-                                        <span class="text-white font-medium">${{ number_format($order->total_amount, 2) }}</span>
+                                        <span class="text-white font-medium">${{ number_format($order->total_amount ?? 0, 2) }}</span>
                                     </td>
                                     <td class="px-6 py-4">
                                         @php
@@ -126,9 +126,10 @@
                                                 'completed' => 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
                                                 'cancelled' => 'bg-red-500/20 text-red-300 border-red-500/30',
                                             ];
+                                            $status = $order->status ?? 'pending';
                                         @endphp
-                                        <span class="px-3 py-1 rounded-full text-xs font-medium border {{ $statusColors[$order->status] ?? 'bg-gray-500/20 text-gray-300 border-gray-500/30' }}">
-                                            {{ ucfirst($order->status) }}
+                                        <span class="px-3 py-1 rounded-full text-xs font-medium border {{ $statusColors[$status] ?? 'bg-gray-500/20 text-gray-300 border-gray-500/30' }}">
+                                            {{ ucfirst($status) }}
                                         </span>
                                     </td>
                                     <td class="px-6 py-4">
@@ -139,20 +140,21 @@
                                                 'failed' => 'text-red-400',
                                                 'refunded' => 'text-purple-400',
                                             ];
+                                            $paymentStatus = $order->payment_status ?? 'pending';
                                         @endphp
-                                        <span class="{{ $paymentColors[$order->payment_status] ?? 'text-gray-400' }}">
-                                            {{ ucfirst($order->payment_status) }}
+                                        <span class="{{ $paymentColors[$paymentStatus] ?? 'text-gray-400' }}">
+                                            {{ ucfirst($paymentStatus) }}
                                         </span>
                                     </td>
                                     <td class="px-6 py-4">
                                         <div>
-                                            <p class="text-white text-sm">{{ $order->created_at->format('M d, Y') }}</p>
-                                            <p class="text-gray-400 text-xs">{{ $order->created_at->format('h:i A') }}</p>
+                                            <p class="text-white text-sm">{{ $order->created_at ? $order->created_at->format('M d, Y') : 'N/A' }}</p>
+                                            <p class="text-gray-400 text-xs">{{ $order->created_at ? $order->created_at->format('h:i A') : '' }}</p>
                                         </div>
                                     </td>
                                     <td class="px-6 py-4">
                                         <div class="flex items-center space-x-2">
-                                            <button onclick="viewOrder({{ $order->id }})"
+                                            <button data-order-id="{{ $order->id }}" onclick="viewOrder(this.dataset.orderId)"
                                                     class="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm">
                                                 <i class="fas fa-eye"></i>
                                             </button>
@@ -166,7 +168,7 @@
                                                     <div class="p-2">
                                                         @foreach(['pending', 'processing', 'shipped', 'delivered', 'completed'] as $status)
                                                             @if($status !== $order->status)
-                                                            <button onclick="updateOrderStatus({{ $order->id }}, '{{ $status }}')"
+                                                            <button data-order-id="{{ $order->id }}" data-status="{{ $status }}" onclick="updateOrderStatus(this.dataset.orderId, this.dataset.status)"
                                                                     class="block w-full text-left px-3 py-2 text-white hover:bg-gray-700 rounded text-sm">
                                                                 Mark as {{ ucfirst($status) }}
                                                             </button>
@@ -185,7 +187,7 @@
                     </div>
 
                     <!-- Pagination -->
-                    @if($orders->hasPages())
+                    @if(isset($orders) && $orders->hasPages())
                         <div class="px-6 py-4 border-t border-gray-700">
                             {{ $orders->links() }}
                         </div>
@@ -198,40 +200,63 @@
                         </div>
                         <h3 class="text-xl font-medium text-white mb-2">No Orders Found</h3>
                         <p class="text-gray-400 mb-6">No orders have been placed yet.</p>
+                        <div class="space-y-2 text-sm text-gray-500">
+                            <p>To test the order system, you can:</p>
+                            <p>• Browse products as a customer</p>
+                            <p>• Add items to cart and place test orders</p>
+                            <p>• Orders will appear here for management</p>
+                        </div>
                     </div>
                 @endif
             </div>
         </div>
     </div>
 
+    <!-- CSRF Token for AJAX requests -->
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+
     <!-- JavaScript for Order Management -->
     <script>
         function viewOrder(orderId) {
             // You can implement order details modal or redirect to details page
-            window.location.href = `/admin/orders/${orderId}/view`;
+            if (confirm('View order details? (This will redirect to order details page)')) {
+                window.location.href = `/admin/orders/${orderId}/view`;
+            }
         }
 
         function updateOrderStatus(orderId, status) {
             if (confirm(`Are you sure you want to mark this order as ${status}?`)) {
+                const csrfToken = document.querySelector('meta[name="csrf-token"]');
+                
+                if (!csrfToken) {
+                    alert('CSRF token not found. Please refresh the page.');
+                    return;
+                }
+
                 fetch(`/admin/orders/${orderId}/status`, {
                     method: 'PATCH',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                        'X-CSRF-TOKEN': csrfToken.getAttribute('content')
                     },
                     body: JSON.stringify({ status: status })
                 })
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     if (data.success) {
                         location.reload();
                     } else {
-                        alert('Error updating order status');
+                        alert(data.message || 'Error updating order status');
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    alert('Error updating order status');
+                    alert('Error updating order status. Please try again.');
                 });
             }
         }
