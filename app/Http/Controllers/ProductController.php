@@ -84,16 +84,47 @@ class ProductController extends Controller
     /**
      * Display single product
      */
-    public function show($slug)
+    public function show($id)
     {
-        $product = MongoDBProduct::where('slug', $slug)
-            ->where('is_active', true)
-            ->firstOrFail();
+        // Try to find by MongoDB ObjectID first, then by slug
+        $product = null;
+        
+        // Check if it's a valid MongoDB ObjectID (24 character hex string)
+        if (preg_match('/^[a-f\d]{24}$/i', $id)) {
+            try {
+                $product = MongoDBProduct::where('_id', $id)
+                    ->where(function($q) {
+                        $q->where('is_active', true)
+                          ->orWhereNull('is_active'); // Include products where is_active is null
+                    })
+                    ->first();
+            } catch (\Exception $e) {
+                // If MongoDB ObjectID fails, try slug
+            }
+        }
+        
+        // If not found by ObjectID, try by slug
+        if (!$product) {
+            $product = MongoDBProduct::where('slug', $id)
+                ->where(function($q) {
+                    $q->where('is_active', true)
+                      ->orWhereNull('is_active'); // Include products where is_active is null
+                })
+                ->first();
+        }
+        
+        // If still not found, throw 404
+        if (!$product) {
+            abort(404, 'Product not found');
+        }
 
         // Get related products
         $relatedProducts = MongoDBProduct::where('category', $product->category)
             ->where('_id', '!=', $product->_id)
-            ->where('is_active', true)
+            ->where(function($q) {
+                $q->where('is_active', true)
+                  ->orWhereNull('is_active'); // Include products where is_active is null
+            })
             ->limit(4)
             ->get();
 
