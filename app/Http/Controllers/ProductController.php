@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\MongoDBProduct;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 
 class ProductController extends Controller
 {
@@ -12,71 +14,90 @@ class ProductController extends Controller
      */
     public function index(Request $request)
     {
-        $query = MongoDBProduct::query();
-        
-        // Filter active products if the field exists
-        $query->where(function($q) {
-            $q->where('is_active', true)
-              ->orWhereNull('is_active'); // Include products where is_active is null (for backward compatibility)
-        });
-
-        // Search functionality
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%")
-                  ->orWhere('tags', 'like', "%{$search}%");
-            });
-        }
-
-        // Category filter
-        if ($request->filled('category')) {
-            $query->where('category', $request->category);
-        }
-
-        // Price range filter
-        if ($request->filled('min_price')) {
-            $query->where('price', '>=', $request->min_price);
-        }
-        if ($request->filled('max_price')) {
-            $query->where('price', '<=', $request->max_price);
-        }
-
-        // Sort options
-        $sortBy = $request->get('sort', 'name');
-        
-        switch ($sortBy) {
-            case 'price_low':
-                $query->orderBy('price', 'asc');
-                break;
-            case 'price_high':
-                $query->orderBy('price', 'desc');
-                break;
-            case 'newest':
-                $query->orderBy('created_at', 'desc');
-                break;
-            case 'featured':
-                $query->orderBy('is_featured', 'desc')->orderBy('created_at', 'desc');
-                break;
-            default:
-                $query->orderBy($sortBy, 'asc');
-        }
-
-        $products = $query->paginate(12);
-        
-        // Get available categories for filter
-        $allProducts = MongoDBProduct::whereNotNull('category')->get();
-        $categoryNames = $allProducts->pluck('category')->unique()->filter()->sort();
+        try {
+            $query = MongoDBProduct::query();
             
-        // Create category objects for the view
-        $categories = $categoryNames->map(function($categoryName) {
-            return (object) [
-                'id' => $categoryName,
-                'name' => ucfirst(str_replace('-', ' ', $categoryName)),
-                'slug' => $categoryName
-            ];
-        });
+            // Filter active products if the field exists
+            $query->where(function($q) {
+                $q->where('is_active', true)
+                  ->orWhereNull('is_active'); // Include products where is_active is null (for backward compatibility)
+            });
+
+            // Search functionality
+            if ($request->filled('search')) {
+                $search = $request->search;
+                $query->where(function($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('description', 'like', "%{$search}%")
+                      ->orWhere('tags', 'like', "%{$search}%");
+                });
+            }
+
+            // Category filter
+            if ($request->filled('category')) {
+                $query->where('category', $request->category);
+            }
+
+            // Price range filter
+            if ($request->filled('min_price')) {
+                $query->where('price', '>=', $request->min_price);
+            }
+            if ($request->filled('max_price')) {
+                $query->where('price', '<=', $request->max_price);
+            }
+
+            // Sort options
+            $sortBy = $request->get('sort', 'name');
+            
+            switch ($sortBy) {
+                case 'price_low':
+                    $query->orderBy('price', 'asc');
+                    break;
+                case 'price_high':
+                    $query->orderBy('price', 'desc');
+                    break;
+                case 'newest':
+                    $query->orderBy('created_at', 'desc');
+                    break;
+                case 'featured':
+                    $query->orderBy('is_featured', 'desc')->orderBy('created_at', 'desc');
+                    break;
+                default:
+                    $query->orderBy($sortBy, 'asc');
+            }
+
+            $products = $query->paginate(12);
+            
+            // Get available categories for filter
+            $allProducts = MongoDBProduct::whereNotNull('category')->get();
+            $categoryNames = $allProducts->pluck('category')->unique()->filter()->sort();
+                
+            // Create category objects for the view
+            $categories = $categoryNames->map(function($categoryName) {
+                return (object) [
+                    'id' => $categoryName,
+                    'name' => ucfirst(str_replace('-', ' ', $categoryName)),
+                    'slug' => $categoryName
+                ];
+            });
+
+        } catch (\Exception $e) {
+            // MongoDB connection failed - show error page with fallback
+            Log::error('MongoDB connection failed in ProductController@index: ' . $e->getMessage());
+            
+            // Return empty collections to prevent view errors
+            $products = new \Illuminate\Pagination\LengthAwarePaginator(
+                collect([]), 0, 12, 1, ['path' => request()->url()]
+            );
+            $categories = collect([]);
+            
+            // Add error message for admin users
+            if (Auth::check() && Auth::user()->role === 'admin') {
+                session()->flash('error', 'MongoDB connection failed: ' . $e->getMessage());
+            } else {
+                session()->flash('error', 'Products are temporarily unavailable. Please try again later.');
+            }
+        }
 
         return view('products.index', compact('products', 'categories'));
     }

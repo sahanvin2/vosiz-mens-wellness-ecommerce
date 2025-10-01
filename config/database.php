@@ -100,22 +100,25 @@ return [
 
         'mongodb' => [
             'driver' => 'mongodb',
-            'dsn' => env('MONGODB_DSN', 'mongodb://localhost:27017'),
+            'dsn' => env('MONGODB_DSN'),
             'database' => env('MONGODB_DATABASE', 'vosiz_products'),
             'host' => env('MONGO_DB_HOST', '127.0.0.1'),
             'port' => env('MONGO_DB_PORT', 27017),
             'username' => env('MONGO_DB_USERNAME'),
             'password' => env('MONGO_DB_PASSWORD'),
-            'options' => [
+            'options' => array_filter([
                 'database' => env('MONGO_DB_AUTHENTICATION_DATABASE', 'admin'),
-                'retryWrites' => true,
-                'w' => 'majority',
-                'maxPoolSize' => 10,
-                'serverSelectionTimeoutMS' => 5000,
-                'connectTimeoutMS' => 10000,
-                'socketTimeoutMS' => 5000,
-            ],
-            'ssl' => env('MONGO_DB_SSL', false),
+                'retryWrites' => env('MONGO_DB_RETRY_WRITES', true),
+                'w' => env('MONGO_DB_W', 'majority'),
+                'maxPoolSize' => env('MONGO_DB_MAX_POOL_SIZE', 10),
+                'serverSelectionTimeoutMS' => env('MONGO_DB_SERVER_SELECTION_TIMEOUT', 5000),
+                'connectTimeoutMS' => env('MONGO_DB_CONNECT_TIMEOUT', 10000),
+                'socketTimeoutMS' => env('MONGO_DB_SOCKET_TIMEOUT', 5000),
+                'ssl' => env('MONGO_DB_SSL', false),
+                'tls' => env('MONGO_DB_TLS', false),
+                'tlsAllowInvalidCertificates' => env('MONGO_DB_TLS_ALLOW_INVALID_CERTS', false),
+                'tlsAllowInvalidHostnames' => env('MONGO_DB_TLS_ALLOW_INVALID_HOSTNAMES', false),
+            ]),
         ],
 
         'sqlsrv' => [
