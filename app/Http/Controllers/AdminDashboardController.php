@@ -625,4 +625,46 @@ class AdminDashboardController extends Controller
     {
         return view('admin.videos.manage');
     }
+
+    // API Token Management Methods
+    public function apiTokens()
+    {
+        $tokens = request()->user()->tokens;
+        return view('admin.api-tokens', compact('tokens'));
+    }
+
+    public function createApiToken(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'abilities' => 'sometimes|array'
+        ]);
+
+        $abilities = $validated['abilities'] ?? ['*'];
+        
+        // If "all permissions" is selected, use wildcard
+        if (in_array('*', $abilities)) {
+            $abilities = ['*'];
+        }
+
+        $token = $request->user()->createToken(
+            $validated['name'],
+            $abilities
+        );
+
+        return redirect()->route('admin.api.tokens')->with([
+            'token' => $token->plainTextToken,
+            'success' => 'API token created successfully!'
+        ]);
+    }
+
+    public function revokeApiToken($id)
+    {
+        request()->user()->tokens()->where('id', $id)->delete();
+        
+        return redirect()->route('admin.api.tokens')->with(
+            'success', 
+            'API token revoked successfully!'
+        );
+    }
 }

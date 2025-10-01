@@ -450,6 +450,11 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
     Route::put('/products/{id}', [App\Http\Controllers\AdminDashboardController::class, 'updateProduct'])->name('products.update');
     Route::delete('/products/{id}', [App\Http\Controllers\AdminDashboardController::class, 'deleteProduct'])->name('products.delete');
     
+    // API Token Management Routes
+    Route::get('/api/tokens', [App\Http\Controllers\AdminDashboardController::class, 'apiTokens'])->name('api.tokens');
+    Route::post('/api/tokens', [App\Http\Controllers\AdminDashboardController::class, 'createApiToken'])->name('api.tokens.create');
+    Route::delete('/api/tokens/{id}', [App\Http\Controllers\AdminDashboardController::class, 'revokeApiToken'])->name('api.tokens.revoke');
+    
     // Category Management Routes
     Route::get('/categories/manage', [App\Http\Controllers\AdminDashboardController::class, 'manageCategories'])->name('categories.manage');
     Route::get('/categories/create', [App\Http\Controllers\AdminDashboardController::class, 'createCategory'])->name('categories.create');

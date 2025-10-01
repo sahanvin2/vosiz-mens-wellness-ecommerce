@@ -79,6 +79,11 @@
                         <i class="fas fa-shopping-cart text-lg mr-4"></i>
                         <span class="font-semibold">Orders</span>
                     </a>
+                    
+                    <a href="{{ route('admin.api.tokens') }}" class="group flex items-center p-4 rounded-xl {{ request()->routeIs('admin.api*') ? 'bg-gradient-to-r from-amber-500 to-yellow-600 text-black shadow-lg' : 'text-gray-300 hover:bg-white hover:bg-opacity-10' }} transition-all duration-300">
+                        <i class="fas fa-key text-lg mr-4"></i>
+                        <span class="font-semibold">API Tokens</span>
+                    </a>
                 </div>
 
                 <div class="mt-8 pt-8 border-t border-gray-800">
