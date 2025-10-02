@@ -441,12 +441,10 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
     Route::delete('/suppliers/{supplier}', [App\Http\Controllers\AdminDashboardController::class, 'deleteSupplier'])->name('suppliers.delete');
     
     // Product Management Routes
-    Route::get('/products/manage', [App\Http\Controllers\AdminDashboardController::class, 'manageProducts'])->name('products.manage');
-    Route::get('/products/create', [App\Http\Controllers\AdminDashboardController::class, 'createProduct'])->name('products.create');
-    Route::post('/products', [App\Http\Controllers\AdminDashboardController::class, 'storeProduct'])->name('products.store');
-    Route::get('/products/{id}/edit', [App\Http\Controllers\AdminDashboardController::class, 'editProduct'])->name('products.edit');
-    Route::put('/products/{id}', [App\Http\Controllers\AdminDashboardController::class, 'updateProduct'])->name('products.update');
-    Route::delete('/products/{id}', [App\Http\Controllers\AdminDashboardController::class, 'deleteProduct'])->name('products.delete');
+    // Product management routes have been migrated to a dedicated resource controller
+    // to avoid duplicate route names. See the resource registration later in this
+    // file which uses App\Http\Controllers\Admin\AdminProductController::class
+    // Route::resource('products', Admin\AdminProductController::class);
     
     // API Token Management Routes
     Route::get('/api/tokens', [App\Http\Controllers\AdminDashboardController::class, 'apiTokens'])->name('api.tokens');
