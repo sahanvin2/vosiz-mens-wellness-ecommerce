@@ -4,6 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\MongoDBProduct;
+use App\Models\User;
+use App\Models\Category;
+use App\Models\Product;
 use App\Services\ImageUploadService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -31,8 +34,8 @@ class AdminProductController extends Controller
      */
     public function index()
     {
-        $products = MongoDBProduct::orderBy('created_at', 'desc')->get();
-        return view('admin.products.index', compact('products'));
+        // Redirect to centralized admin manage page which paginates and shows stats
+        return redirect()->route('admin.products.manage');
     }
 
     /**
@@ -40,7 +43,7 @@ class AdminProductController extends Controller
      */
     public function create()
     {
-        // Get available categories
+        // Get available categories as objects with id and name for the view
         $categories = collect([
             'beard-care' => 'Beard Care',
             'skincare' => 'Skincare', 
@@ -48,9 +51,13 @@ class AdminProductController extends Controller
             'body-care' => 'Body Care',
             'supplements' => 'Supplements',
             'accessories' => 'Accessories'
-        ]);
-        
-        return view('admin.products.create', compact('categories'));
+        ])->map(function ($label, $slug) {
+            return (object) ['id' => $slug, 'name' => $label];
+        })->values();
+        // Also provide suppliers (admins and suppliers) for the select box
+        $suppliers = User::whereIn('role', ['supplier', 'admin'])->where('is_active', true)->orderBy('name')->get();
+
+        return view('admin.products.create', compact('categories', 'suppliers'));
     }
 
     /**
@@ -64,9 +71,11 @@ class AdminProductController extends Controller
             'short_description' => 'required|string|max:500',
             'price' => 'required|numeric|min:0',
             'compare_price' => 'nullable|numeric|min:0',
-            'sku' => 'required|string|unique:mongodb_products,sku',
+            // SKU uniqueness is handled against MongoDB below
+            'sku' => 'required|string',
             'stock_quantity' => 'required|integer|min:0',
-            'category' => 'required|string',
+            'category_id' => 'required',
+            'supplier_id' => 'nullable',
             'brand' => 'required|string',
             'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'ingredients' => 'nullable|string',
@@ -84,6 +93,30 @@ class AdminProductController extends Controller
         }
 
         // Create product
+        // Ensure SKU is unique in MongoDB
+        if (MongoDBProduct::where('sku', $request->sku)->exists()) {
+            return back()->withInput()->withErrors(['sku' => 'The SKU has already been taken.']);
+        }
+        // Resolve category and supplier names
+        $categoryName = null;
+        $supplierName = null;
+        if ($request->filled('category_id')) {
+            $cat = Category::find($request->category_id);
+            $categoryName = $cat ? $cat->name : null;
+        }
+        if ($request->filled('supplier_id')) {
+            $sup = User::find($request->supplier_id);
+            $supplierName = $sup ? $sup->name : null;
+        }
+
+        // Determine categoryId for MySQL mirror
+        $categoryId = null;
+        if ($request->filled('category_id')) {
+            $categoryId = $request->category_id;
+        } elseif ($categoryName) {
+            $categoryId = Category::where('name', $categoryName)->value('id');
+        }
+
         $product = MongoDBProduct::create([
             'name' => $request->name,
             'slug' => $slug,
@@ -93,20 +126,55 @@ class AdminProductController extends Controller
             'compare_price' => $request->compare_price ? (float) $request->compare_price : null,
             'sku' => $request->sku,
             'stock_quantity' => (int) $request->stock_quantity,
-            'category' => $request->category,
+            'category_id' => $request->category_id ?? null,
+            'category_name' => $categoryName,
             'brand' => $request->brand,
             'images' => $imagePaths,
             'ingredients' => $request->ingredients ? explode(',', $request->ingredients) : [],
             'benefits' => $request->benefits ? explode(',', $request->benefits) : [],
             'how_to_use' => $request->how_to_use,
             'tags' => $request->tags ? explode(',', $request->tags) : [],
+            'supplier_id' => $request->supplier_id ?? null,
+            'supplier_name' => $supplierName,
             'is_active' => $request->has('is_active'),
             'is_featured' => $request->has('is_featured'),
             'created_at' => now(),
             'updated_at' => now(),
         ]);
 
-        return redirect()->route('admin.products.index')
+        // Mirror to MySQL products table for visibility in SQL-backed admin pages
+        try {
+            $match = [];
+            if (!empty($product->sku)) {
+                $match['sku'] = $product->sku;
+            } else {
+                $match['slug'] = $product->slug;
+            }
+
+            Product::updateOrCreate($match, [
+                'category_id' => $product->category_id ?? $categoryId,
+                'supplier_id' => $product->supplier_id ?? null,
+                'name' => $product->name,
+                'slug' => $product->slug,
+                'description' => $product->description ?? null,
+                'short_description' => $product->short_description ?? null,
+                'price' => isset($product->price) ? (float)$product->price : 0,
+                'compare_price' => isset($product->compare_price) ? (float)$product->compare_price : null,
+                'stock_quantity' => isset($product->stock_quantity) ? (int)$product->stock_quantity : 0,
+                'sku' => $product->sku ?? null,
+                'images' => $product->images ?? [],
+                'ingredients' => $product->ingredients ?? [],
+                'benefits' => $product->benefits ?? [],
+                'is_featured' => isset($product->is_featured) ? (bool)$product->is_featured : false,
+                'is_active' => isset($product->is_active) ? (bool)$product->is_active : ($product->status === 'active' ? true : false),
+                'weight' => isset($product->weight) ? (float)$product->weight : 0,
+            ]);
+        } catch (\Exception $e) {
+            // Log but don't block admin flow
+            \Illuminate\Support\Facades\Log::error('Failed to mirror product to MySQL: ' . $e->getMessage());
+        }
+
+        return redirect()->route('admin.products.manage')
             ->with('success', 'Product created successfully!');
     }
 
@@ -117,7 +185,7 @@ class AdminProductController extends Controller
     {
         $product = MongoDBProduct::findOrFail($id);
         
-        // Get available categories
+        // Get available categories as objects with id and name for the view
         $categories = collect([
             'beard-care' => 'Beard Care',
             'skincare' => 'Skincare', 
@@ -125,9 +193,13 @@ class AdminProductController extends Controller
             'body-care' => 'Body Care',
             'supplements' => 'Supplements',
             'accessories' => 'Accessories'
-        ]);
-        
-        return view('admin.products.edit', compact('product', 'categories'));
+        ])->map(function ($label, $slug) {
+            return (object) ['id' => $slug, 'name' => $label];
+        })->values();
+        // Provide suppliers for the edit view as well
+        $suppliers = User::whereIn('role', ['supplier', 'admin'])->where('is_active', true)->orderBy('name')->get();
+
+        return view('admin.products.edit', compact('product', 'categories', 'suppliers'));
     }
 
     /**
@@ -143,9 +215,11 @@ class AdminProductController extends Controller
             'short_description' => 'required|string|max:500',
             'price' => 'required|numeric|min:0',
             'compare_price' => 'nullable|numeric|min:0',
-            'sku' => 'required|string|unique:mongodb_products,sku,' . $id,
+            // SKU uniqueness handled against MongoDB below
+            'sku' => 'required|string',
             'stock_quantity' => 'required|integer|min:0',
-            'category' => 'required|string',
+            'category_id' => 'required',
+            'supplier_id' => 'nullable',
             'brand' => 'required|string',
             'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'ingredients' => 'nullable|string',
@@ -163,6 +237,44 @@ class AdminProductController extends Controller
             $imagePaths = array_merge($imagePaths, $newImages);
         }
 
+        // Ensure SKU is unique in MongoDB (exclude current product)
+        $existing = MongoDBProduct::where('sku', $request->sku)->first();
+        if ($existing && (string) $existing->_id !== (string) $product->_id) {
+            return back()->withInput()->withErrors(['sku' => 'The SKU has already been taken.']);
+        }
+
+        // Resolve category and supplier names for update
+        $categoryName = null;
+        $supplierName = null;
+        if ($request->filled('category_id')) {
+            $cat = Category::find($request->category_id);
+            $categoryName = $cat ? $cat->name : null;
+        }
+        if ($request->filled('supplier_id')) {
+            $sup = User::find($request->supplier_id);
+            $supplierName = $sup ? $sup->name : null;
+        }
+
+        // Determine categoryId for MySQL mirror
+        $categoryId = null;
+        if ($request->filled('category_id')) {
+            $categoryId = $request->category_id;
+        } elseif ($categoryName) {
+            $categoryId = Category::where('name', $categoryName)->value('id');
+        }
+
+        // Resolve category and supplier names for update
+        $categoryName = null;
+        $supplierName = null;
+        if ($request->filled('category_id')) {
+            $cat = Category::find($request->category_id);
+            $categoryName = $cat ? $cat->name : null;
+        }
+        if ($request->filled('supplier_id')) {
+            $sup = User::find($request->supplier_id);
+            $supplierName = $sup ? $sup->name : null;
+        }
+
         // Update product
         $product->update([
             'name' => $request->name,
@@ -173,19 +285,53 @@ class AdminProductController extends Controller
             'compare_price' => $request->compare_price ? (float) $request->compare_price : null,
             'sku' => $request->sku,
             'stock_quantity' => (int) $request->stock_quantity,
-            'category' => $request->category,
+            'category_id' => $request->category_id ?? null,
+            'category_name' => $categoryName,
             'brand' => $request->brand,
             'images' => $imagePaths,
             'ingredients' => $request->ingredients ? explode(',', $request->ingredients) : [],
             'benefits' => $request->benefits ? explode(',', $request->benefits) : [],
             'how_to_use' => $request->how_to_use,
             'tags' => $request->tags ? explode(',', $request->tags) : [],
+            'supplier_id' => $request->supplier_id ?? null,
+            'supplier_name' => $supplierName,
             'is_active' => $request->has('is_active'),
             'is_featured' => $request->has('is_featured'),
             'updated_at' => now(),
         ]);
 
-        return redirect()->route('admin.products.index')
+        // Mirror update to MySQL
+        try {
+            $match = [];
+            if (!empty($product->sku)) {
+                $match['sku'] = $product->sku;
+            } else {
+                $match['slug'] = $product->slug;
+            }
+
+            Product::updateOrCreate($match, [
+                'category_id' => $product->category_id ?? $categoryId,
+                'supplier_id' => $product->supplier_id ?? null,
+                'name' => $product->name,
+                'slug' => $product->slug,
+                'description' => $product->description ?? null,
+                'short_description' => $product->short_description ?? null,
+                'price' => isset($product->price) ? (float)$product->price : 0,
+                'compare_price' => isset($product->compare_price) ? (float)$product->compare_price : null,
+                'stock_quantity' => isset($product->stock_quantity) ? (int)$product->stock_quantity : 0,
+                'sku' => $product->sku ?? null,
+                'images' => $product->images ?? [],
+                'ingredients' => $product->ingredients ?? [],
+                'benefits' => $product->benefits ?? [],
+                'is_featured' => isset($product->is_featured) ? (bool)$product->is_featured : false,
+                'is_active' => isset($product->is_active) ? (bool)$product->is_active : ($product->status === 'active' ? true : false),
+                'weight' => isset($product->weight) ? (float)$product->weight : 0,
+            ]);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to mirror updated product to MySQL: ' . $e->getMessage());
+        }
+
+        return redirect()->route('admin.products.manage')
             ->with('success', 'Product updated successfully!');
     }
 
