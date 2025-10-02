@@ -448,6 +448,8 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
 
     // Resourceful admin product routes (CRUD)
     Route::resource('products', App\Http\Controllers\Admin\AdminProductController::class);
+    // Backward-compatible named route used in views/controllers: admin.products.delete
+    Route::delete('/products/{id}/delete', [App\Http\Controllers\Admin\AdminProductController::class, 'destroy'])->name('products.delete');
     Route::delete('/products/{id}/image', [App\Http\Controllers\Admin\AdminProductController::class, 'removeImage'])->name('products.remove-image');
     
     // API Token Management Routes
