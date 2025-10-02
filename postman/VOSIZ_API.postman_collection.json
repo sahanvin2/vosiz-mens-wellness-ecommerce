@@ -1,0 +1,79 @@
+{
+  "info": {
+    "name": "VOSIZ API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Postman collection for public, authenticated, and admin VOSIZ API endpoints."
+  },
+  "item": [
+    {
+      "name": "Public",
+      "item": [
+        {
+          "name": "Featured Products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {"raw": "{{base_url}}/api/products/featured","host": ["{{base_url}}"],"path": ["api","products","featured"]}
+          }
+        },
+        {
+          "name": "Search Products",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{base_url}}/api/products/search?q=cream","host": ["{{base_url}}"],"path": ["api","products","search"],"query": [{"key":"q","value":"cream"}]}
+          }
+        },
+        {
+          "name": "Active Categories",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{base_url}}/api/categories","host": ["{{base_url}}"],"path": ["api","categories"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Authenticated (Sanctum)",
+      "item": [
+        {
+          "name": "Get Current User",
+            "request": {"method": "GET","header": [{"key":"Authorization","value":"Bearer {{api_token}}","type":"text"}],"url": {"raw": "{{base_url}}/api/user","host": ["{{base_url}}"],"path": ["api","user"]}}
+        },
+        {
+          "name": "List Orders",
+          "request": {"method": "GET","header": [{"key":"Authorization","value":"Bearer {{api_token}}","type":"text"}],"url": {"raw": "{{base_url}}/api/orders","host": ["{{base_url}}"],"path": ["api","orders"]}}
+        },
+        {
+          "name": "Create Token (From existing login)",
+          "request": {"method": "POST","header": [{"key": "Authorization", "value": "Bearer {{api_token}}", "type": "text"},{"key":"Content-Type","value":"application/json"}],"body": {"mode": "raw","raw": "{\n  \"name\": \"Postman Key\",\n  \"abilities\": [\"*\"]\n}"},"url": {"raw": "{{base_url}}/api/tokens","host": ["{{base_url}}"],"path": ["api","tokens"]}}
+        },
+        {
+          "name": "List Tokens",
+          "request": {"method": "GET","header": [{"key":"Authorization","value":"Bearer {{api_token}}","type":"text"}],"url": {"raw": "{{base_url}}/api/tokens","host": ["{{base_url}}"],"path": ["api","tokens"]}}
+        },
+        {
+          "name": "Delete Token (by id)",
+          "request": {"method": "DELETE","header": [{"key":"Authorization","value":"Bearer {{api_token}}","type":"text"}],"url": {"raw": "{{base_url}}/api/tokens/1","host": ["{{base_url}}"],"path": ["api","tokens","1"]}}
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "List Products (Admin)",
+          "request": {"method": "GET","header": [{"key":"Authorization","value":"Bearer {{admin_token}}","type":"text"}],"url": {"raw": "{{base_url}}/api/admin/products","host": ["{{base_url}}"],"path": ["api","admin","products"]}}
+        },
+        {
+          "name": "Create Product (Admin)",
+          "request": {"method": "POST","header": [{"key":"Authorization","value":"Bearer {{admin_token}}","type":"text"},{"key":"Content-Type","value":"application/json"}],"body": {"mode": "raw","raw": "{\n  \"name\": \"API Created Product\",\n  \"description\": \"Created via Postman\",\n  \"price\": 19.99,\n  \"category_id\": 1\n}"},"url": {"raw": "{{base_url}}/api/admin/products","host": ["{{base_url}}"],"path": ["api","admin","products"]}}
+        },
+        {
+          "name": "List Users (Admin)",
+          "request": {"method": "GET","header": [{"key":"Authorization","value":"Bearer {{admin_token}}","type":"text"}],"url": {"raw": "{{base_url}}/api/admin/users","host": ["{{base_url}}"],"path": ["api","admin","users"]}}
+        }
+      ]
+    }
+  ],
+  "event": []
+}

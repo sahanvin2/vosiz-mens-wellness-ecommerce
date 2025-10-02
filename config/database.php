@@ -100,11 +100,13 @@ return [
 
         'mongodb' => [
             'driver' => 'mongodb',
-            'dsn' => env('MONGODB_DSN'),
+            // Prefer DSN / SRV style connection; fall back to legacy host:port only if no DSN provided
+            'dsn' => env('MONGODB_DSN') ?: env('MONGODB_URI') ?: env('DB_MONGODB_URI'),
             'database' => env('MONGODB_DATABASE', 'vosiz_products'),
-            'host' => env('MONGO_DB_HOST', '127.0.0.1'),
-            'port' => env('MONGO_DB_PORT', 27017),
-            'username' => env('MONGO_DB_USERNAME'),
+            // If DSN present, null host/port so driver does not try localhost first
+            'host' => (env('MONGODB_DSN') || env('MONGODB_URI') || env('DB_MONGODB_URI')) ? null : env('MONGO_DB_HOST', '127.0.0.1'),
+            'port' => (env('MONGODB_DSN') || env('MONGODB_URI') || env('DB_MONGODB_URI')) ? null : env('MONGO_DB_PORT', 27017),
+            'username' => env('MONGO_DB_USERNAME'), // usually embedded in DSN; left for non-DSN fallback
             'password' => env('MONGO_DB_PASSWORD'),
             'options' => array_filter([
                 'database' => env('MONGO_DB_AUTHENTICATION_DATABASE', 'admin'),

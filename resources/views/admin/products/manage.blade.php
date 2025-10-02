@@ -18,6 +18,18 @@
                 </div>
             </div>
 
+            @if(isset($mongoError) && $mongoError)
+                <div class="mb-6 bg-red-600/20 border border-red-500 text-red-300 px-6 py-4 rounded-lg">
+                    <div class="flex items-start">
+                        <i class="fas fa-exclamation-triangle mt-1 mr-3"></i>
+                        <div>
+                            <p class="font-semibold">Product data temporarily unavailable</p>
+                            <p class="text-sm opacity-80">{{ $mongoError }}. Showing empty state. Once connectivity is restored, products will appear automatically.</p>
+                        </div>
+                    </div>
+                </div>
+            @endif
+
             <!-- Quick Stats -->
             <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
                 <div class="bg-gray-800 rounded-xl p-6">

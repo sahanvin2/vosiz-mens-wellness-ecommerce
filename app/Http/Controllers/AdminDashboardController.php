@@ -9,6 +9,8 @@ use App\Models\Product;
 use App\Models\MongoDBProduct;
 use App\Models\Category;
 use App\Models\Order;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Carbon\Carbon;
 
 class AdminDashboardController extends Controller
@@ -409,24 +411,39 @@ class AdminDashboardController extends Controller
     // Product Management Methods
     public function manageProducts()
     {
-        // Get MongoDB products with pagination
-        $products = MongoDBProduct::orderBy('created_at', 'desc')->paginate(10);
-        
-        // Get categories and suppliers for filters
-        $categories = Category::where('is_active', true)->orderBy('name')->get();
-        // Include both suppliers and admins as potential suppliers
-        $suppliers = User::whereIn('role', ['supplier', 'admin'])->where('is_active', true)->orderBy('name')->get();
-        
-        // Get statistics from MongoDB
-        $stats = [
-            'total_products' => MongoDBProduct::count(),
-            'active_products' => MongoDBProduct::where('status', 'active')->count(),
-            'featured_products' => MongoDBProduct::where('is_featured', true)->count(),
-            'low_stock' => MongoDBProduct::where('stock_quantity', '<=', 10)->count(),
-            'out_of_stock' => MongoDBProduct::where('stock_quantity', '<=', 0)->count(),
-        ];
+        $mongoError = null;
 
-        return view('admin.products.manage', compact('products', 'stats', 'categories', 'suppliers'));
+        try {
+            // Attempt to pull MongoDB products
+            $products = MongoDBProduct::orderBy('created_at', 'desc')->paginate(10);
+
+            $stats = [
+                'total_products'      => MongoDBProduct::count(),
+                'active_products'     => MongoDBProduct::where('status', 'active')->count(),
+                'featured_products'   => MongoDBProduct::where('is_featured', true)->count(),
+                'low_stock'           => MongoDBProduct::where('stock_quantity', '<=', 10)->count(),
+                'out_of_stock'        => MongoDBProduct::where('stock_quantity', '<=', 0)->count(),
+            ];
+        } catch (\Throwable $e) {
+            // Graceful fallback if Mongo is down / IP not whitelisted
+            Log::error('Admin manageProducts Mongo failure: '.$e->getMessage());
+            $mongoError = 'MongoDB unavailable: '. $e->getMessage();
+            // Empty paginator so blade logic still works without changes
+            $products = new LengthAwarePaginator([], 0, 10);
+            $stats = [
+                'total_products'    => 0,
+                'active_products'   => 0,
+                'featured_products' => 0,
+                'low_stock'         => 0,
+                'out_of_stock'      => 0,
+            ];
+        }
+
+        // These rely on MySQL – still load even if Mongo failed
+        $categories = Category::where('is_active', true)->orderBy('name')->get();
+        $suppliers  = User::whereIn('role', ['supplier', 'admin'])->where('is_active', true)->orderBy('name')->get();
+
+        return view('admin.products.manage', compact('products', 'stats', 'categories', 'suppliers', 'mongoError'));
     }
 
     public function createProduct()
