@@ -1,0 +1,38 @@
+name: Deploy to Lightsail
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Sync files to Lightsail via SSH
+        uses: appleboy/scp-action@v0.1.0
+        with:
+          host: ${{ secrets.LIGHTSAIL_HOST }}
+          username: ${{ secrets.LIGHTSAIL_USER }}
+          key: ${{ secrets.LIGHTSAIL_PRIVATE_KEY }}
+          port: 22
+          source: "./"
+          target: "/home/bitnami/vosiz-mens-wellness-ecommerce"
+
+      - name: Run remote deploy commands
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.LIGHTSAIL_HOST }}
+          username: ${{ secrets.LIGHTSAIL_USER }}
+          key: ${{ secrets.LIGHTSAIL_PRIVATE_KEY }}
+          port: 22
+          script: |
+            cd /home/bitnami/vosiz-mens-wellness-ecommerce || exit 1
+            composer install --no-dev --prefer-dist --optimize-autoloader
+            /opt/bitnami/php/bin/php artisan migrate --force || true
+            /opt/bitnami/php/bin/php artisan config:cache || true
+            /opt/bitnami/php/bin/php artisan route:cache || true
+            /opt/bitnami/php/bin/php artisan view:cache || true
+            sudo /opt/bitnami/ctlscript.sh restart apache
