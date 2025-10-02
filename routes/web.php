@@ -442,6 +442,11 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
     
     // Product Management Routes
     // Product Management Routes (centralized)
+    // Keep the legacy named 'products.manage' route for backward compatibility
+    // Many controllers and views redirect to or link by this name.
+    Route::get('/products/manage', [App\Http\Controllers\AdminDashboardController::class, 'manageProducts'])->name('products.manage');
+
+    // Resourceful admin product routes (CRUD)
     Route::resource('products', App\Http\Controllers\Admin\AdminProductController::class);
     Route::delete('/products/{id}/image', [App\Http\Controllers\Admin\AdminProductController::class, 'removeImage'])->name('products.remove-image');
     
