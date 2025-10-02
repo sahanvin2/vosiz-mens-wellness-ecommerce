@@ -11,18 +11,43 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // If the table doesn't exist yet, skip this migration.
+        if (!Schema::hasTable('mongo_products')) {
+            return;
+        }
+
         Schema::table('mongo_products', function (Blueprint $table) {
             // Make fields nullable for MongoDB-style flexibility
-            $table->text('short_description')->nullable()->change();
-            $table->text('video_url')->nullable()->change();
-            $table->text('introduction_video')->nullable()->change();
-            $table->text('meta_title')->nullable()->change();
-            $table->text('meta_description')->nullable()->change();
-            $table->decimal('weight', 8, 2)->nullable()->change();
-            $table->decimal('rating_average', 3, 1)->default(0)->change();
-            $table->integer('rating_count')->default(0)->change();
-            $table->integer('views_count')->default(0)->change();
-            $table->integer('sales_count')->default(0)->change();
+            if (Schema::hasColumn('mongo_products', 'short_description')) {
+                $table->text('short_description')->nullable()->change();
+            }
+            if (Schema::hasColumn('mongo_products', 'video_url')) {
+                $table->text('video_url')->nullable()->change();
+            }
+            if (Schema::hasColumn('mongo_products', 'introduction_video')) {
+                $table->text('introduction_video')->nullable()->change();
+            }
+            if (Schema::hasColumn('mongo_products', 'meta_title')) {
+                $table->text('meta_title')->nullable()->change();
+            }
+            if (Schema::hasColumn('mongo_products', 'meta_description')) {
+                $table->text('meta_description')->nullable()->change();
+            }
+            if (Schema::hasColumn('mongo_products', 'weight')) {
+                $table->decimal('weight', 8, 2)->nullable()->change();
+            }
+            if (Schema::hasColumn('mongo_products', 'rating_average')) {
+                $table->decimal('rating_average', 3, 1)->default(0)->change();
+            }
+            if (Schema::hasColumn('mongo_products', 'rating_count')) {
+                $table->integer('rating_count')->default(0)->change();
+            }
+            if (Schema::hasColumn('mongo_products', 'views_count')) {
+                $table->integer('views_count')->default(0)->change();
+            }
+            if (Schema::hasColumn('mongo_products', 'sales_count')) {
+                $table->integer('sales_count')->default(0)->change();
+            }
         });
     }
 
@@ -31,14 +56,30 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (!Schema::hasTable('mongo_products')) {
+            return;
+        }
+
         Schema::table('mongo_products', function (Blueprint $table) {
             // Revert nullable changes if needed
-            $table->text('short_description')->nullable(false)->change();
-            $table->text('video_url')->nullable(false)->change();
-            $table->text('introduction_video')->nullable(false)->change();
-            $table->text('meta_title')->nullable(false)->change();
-            $table->text('meta_description')->nullable(false)->change();
-            $table->decimal('weight', 8, 2)->nullable(false)->change();
+            if (Schema::hasColumn('mongo_products', 'short_description')) {
+                $table->text('short_description')->nullable(false)->change();
+            }
+            if (Schema::hasColumn('mongo_products', 'video_url')) {
+                $table->text('video_url')->nullable(false)->change();
+            }
+            if (Schema::hasColumn('mongo_products', 'introduction_video')) {
+                $table->text('introduction_video')->nullable(false)->change();
+            }
+            if (Schema::hasColumn('mongo_products', 'meta_title')) {
+                $table->text('meta_title')->nullable(false)->change();
+            }
+            if (Schema::hasColumn('mongo_products', 'meta_description')) {
+                $table->text('meta_description')->nullable(false)->change();
+            }
+            if (Schema::hasColumn('mongo_products', 'weight')) {
+                $table->decimal('weight', 8, 2)->nullable(false)->change();
+            }
         });
     }
 };
