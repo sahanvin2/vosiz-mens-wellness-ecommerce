@@ -1,0 +1,22 @@
+parameters:
+    level: 5
+    paths:
+        - app
+        - tests
+    excludePaths:
+        - bootstrap
+        - storage
+        - vendor
+    ignoreErrors:
+        - '#Call to an undefined method Illuminate\\Database\\Eloquent\\Builder::.*#'
+        - '#Call to an undefined method Illuminate\\Database\\Query\\Builder::.*#'
+        - '#Cannot call method .* on MongoDB\\Laravel\\Eloquent\\Builder\|null#'
+        - '#Method .* has parameter .* with no typehint specified#'
+        - '#Property .* has no typehint specified#'
+        - '#Missing return typehint#'
+        - '#Variable .* might not be defined#'
+    reportUnmatchedIgnoredErrors: false
+    tmpDir: storage/phpstan
+    
+includes:
+    - vendor/larastan/larastan/extension.neon

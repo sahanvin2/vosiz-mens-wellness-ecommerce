@@ -44,14 +44,14 @@
                         <!-- Thumbnail Images (Left) -->
                         <div class="flex flex-col space-y-3 w-20">
                             @if(!empty($product->images) && isset($product->images[0]))
-                                <div class="w-20 h-20 bg-gray-800 rounded-lg overflow-hidden cursor-pointer border-2 border-yellow-400 thumbnail-container" data-image="{{ asset('storage/' . $product->images[0]) }}" onclick="changeMainImage(this.dataset.image)">
-                                    <img src="{{ asset('storage/' . $product->images[0]) }}" alt="{{ $product->name }}" class="w-full h-full object-cover">
+                                <div class="w-20 h-20 bg-gray-800 rounded-lg overflow-hidden cursor-pointer border-2 border-yellow-400 thumbnail-container" data-image="{{ asset($product->images[0]) }}" onclick="changeMainImage(this.dataset.image)">
+                                    <img src="{{ asset($product->images[0]) }}" alt="{{ $product->name }}" class="w-full h-full object-cover">
                                 </div>
                             @endif
                             @if(!empty($product->images))
                                 @foreach(array_slice($product->images, 1, 4) as $image)
-                                <div class="w-20 h-20 bg-gray-800 rounded-lg overflow-hidden cursor-pointer border border-gray-700 thumbnail-container" data-image="{{ asset('storage/' . $image) }}" onclick="changeMainImage(this.dataset.image)">
-                                    <img src="{{ asset('storage/' . $image) }}" alt="{{ $product->name }}" class="w-full h-full object-cover">
+                                <div class="w-20 h-20 bg-gray-800 rounded-lg overflow-hidden cursor-pointer border border-gray-700 thumbnail-container" data-image="{{ asset($image) }}" onclick="changeMainImage(this.dataset.image)">
+                                    <img src="{{ asset($image) }}" alt="{{ $product->name }}" class="w-full h-full object-cover">
                                 </div>
                                 @endforeach
                             @endif
@@ -66,7 +66,7 @@
                         <div class="flex-1">
                             <div class="aspect-square bg-gray-800 rounded-xl overflow-hidden max-w-lg mx-auto">
                                 @if(!empty($product->images) && isset($product->images[0]))
-                                    <img src="{{ asset('storage/' . $product->images[0]) }}" 
+                                    <img src="{{ asset($product->images[0]) }}" 
                                          alt="{{ $product->name }}" 
                                          class="w-full h-full object-cover hover:scale-110 transition-transform duration-500"
                                          id="mainImage">

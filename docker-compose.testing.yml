@@ -1,0 +1,90 @@
+version: '3.8'
+
+services:
+  # Web Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.testing
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_ENV=testing
+      - BASE_URL=http://localhost:8000
+      - DB_CONNECTION=sqlite
+      - DB_DATABASE=:memory:
+    volumes:
+      - .:/var/www/html
+      - ./tests/reports:/var/www/html/tests/reports
+      - ./tests/screenshots:/var/www/html/tests/screenshots
+    depends_on:
+      - selenium
+    networks:
+      - testing
+
+  # Selenium Chrome
+  selenium:
+    image: selenium/standalone-chrome:latest
+    ports:
+      - "4444:4444"
+    environment:
+      - SE_NODE_MAX_SESSIONS=2
+      - SE_NODE_OVERRIDE_MAX_SESSIONS=true
+    volumes:
+      - /dev/shm:/dev/shm
+    networks:
+      - testing
+
+  # MongoDB for testing
+  mongodb-test:
+    image: mongo:6.0
+    ports:
+      - "27018:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=test
+      - MONGO_INITDB_ROOT_PASSWORD=testpass
+      - MONGO_INITDB_DATABASE=vosiz_test
+    volumes:
+      - mongodb_test_data:/data/db
+    networks:
+      - testing
+
+  # PHPUnit Test Runner
+  test-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile.testing
+    command: >
+      bash -c "
+        echo '🏁 Starting automated test suite...' &&
+        composer install --dev --no-interaction &&
+        npm ci && npm run build &&
+        php artisan key:generate --env=testing &&
+        mkdir -p tests/reports tests/screenshots &&
+        echo '⏳ Waiting for services to be ready...' &&
+        sleep 15 &&
+        echo '🧪 Running all tests...' &&
+        vendor/bin/phpunit --testsuite=Unit,Feature,Functional --verbose
+      "
+    environment:
+      - APP_ENV=testing
+      - BASE_URL=http://app:8000
+      - SELENIUM_DRIVER_URL=http://selenium:4444
+      - MONGODB_DSN=mongodb://test:testpass@mongodb-test:27017/vosiz_test
+    volumes:
+      - .:/var/www/html
+      - ./tests/reports:/var/www/html/tests/reports
+      - ./tests/screenshots:/var/www/html/tests/screenshots
+    depends_on:
+      - app
+      - selenium
+      - mongodb-test
+    networks:
+      - testing
+
+volumes:
+  mongodb_test_data:
+
+networks:
+  testing:
+    driver: bridge

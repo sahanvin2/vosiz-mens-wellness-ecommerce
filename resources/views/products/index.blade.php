@@ -27,8 +27,8 @@
                         All Products
                     </a>
                     @foreach($categories as $category)
-                    <a href="{{ route('products.index', ['category' => $category->id]) }}" 
-                       class="px-4 py-2 rounded-full text-sm {{ request('category') == $category->id ? 'bg-vosiz-gold text-black' : 'bg-gray-800 text-gray-300 hover:bg-gray-700' }} transition-colors">
+                    <a href="{{ route('products.index', ['category' => $category->name]) }}" 
+                       class="px-4 py-2 rounded-full text-sm {{ request('category') == $category->name ? 'bg-vosiz-gold text-black' : 'bg-gray-800 text-gray-300 hover:bg-gray-700' }} transition-colors">
                         {{ $category->name }}
                     </a>
                     @endforeach
@@ -76,11 +76,24 @@
                             <div class="aspect-w-1 aspect-h-1 bg-gradient-to-br from-gray-700 to-gray-800 relative">
                                 <div class="w-full h-64 bg-gray-600 flex items-center justify-center">
                                     @if(!empty($product->images) && isset($product->images[0]))
-                                        <img src="{{ asset('storage/' . $product->images[0]) }}" 
+                                        @php
+                                            $imagePath = $product->images[0];
+                                            // Handle different image path formats
+                                            if (str_starts_with($imagePath, '/storage/')) {
+                                                $imageUrl = asset($imagePath);
+                                            } elseif (str_starts_with($imagePath, '/images/')) {
+                                                $imageUrl = asset($imagePath);
+                                            } else {
+                                                $imageUrl = asset('storage/' . $imagePath);
+                                            }
+                                        @endphp
+                                        <img src="{{ $imageUrl }}" 
                                              alt="{{ $product->name }}" 
-                                             class="w-full h-full object-cover">
+                                             class="w-full h-full object-cover"
+                                             onerror="this.parentElement.innerHTML='<i class=\'fas fa-image text-gray-400 text-4xl\'></i><p class=\'text-gray-400 text-sm mt-2\'>{{ $product->name }}</p>'">
                                     @else
                                         <i class="fas fa-image text-gray-400 text-4xl"></i>
+                                        <p class="text-gray-400 text-sm mt-2">{{ $product->name }}</p>
                                     @endif
                                 </div>
                                 

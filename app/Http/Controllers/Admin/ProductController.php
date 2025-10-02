@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\MongoDBProduct;
+use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
@@ -17,12 +18,9 @@ class ProductController extends Controller
 
     public function create()
     {
-        $categories = [
-            'beard-care' => 'Beard Care',
-            'skincare' => 'Skincare', 
-            'hair-care' => 'Hair Care',
-            'body-care' => 'Body Care'
-        ];
+        $categories = Category::where('is_active', true)
+            ->orderBy('sort_order')
+            ->get();
         return view('admin.products.create', compact('categories'));
     }
 
@@ -33,48 +31,81 @@ class ProductController extends Controller
             'description' => 'required|string',
             'short_description' => 'required|string|max:500',
             'price' => 'required|numeric|min:0',
-            'compare_price' => 'nullable|numeric|min:0',
-            'sku' => 'required|string|unique:mongodb.products,sku',
+            'sale_price' => 'nullable|numeric|min:0',
+            'sku' => 'required|string',
             'stock_quantity' => 'required|integer|min:0',
-            'category' => 'required|string',
-            'brand' => 'required|string|max:100',
-            'ingredients' => 'array',
-            'benefits' => 'array',
-            'how_to_use' => 'required|string',
-            'tags' => 'array',
+            'category_id' => 'required|integer|exists:categories,id',
+            'ingredients' => 'nullable|string',
+            'features' => 'nullable|string',
+            'usage_instructions' => 'nullable|string',
+            'tags' => 'nullable|string',
             'is_active' => 'boolean',
             'is_featured' => 'boolean',
-            'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048'
+            'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
         ]);
 
         // Generate slug
         $validated['slug'] = Str::slug($validated['name']);
         
+        // Get category details
+        $category = Category::find($validated['category_id']);
+        $validated['category_name'] = $category->name;
+        
+        // Convert string fields to arrays for MongoDB
+        if (isset($validated['ingredients'])) {
+            $validated['ingredients'] = array_filter(array_map('trim', explode(',', $validated['ingredients'])));
+        }
+        if (isset($validated['features'])) {
+            $validated['features'] = array_filter(array_map('trim', explode(',', $validated['features'])));
+        }
+        if (isset($validated['tags'])) {
+            $validated['tags'] = array_filter(array_map('trim', explode(',', $validated['tags'])));
+        }
+        
+        // Calculate discount percentage if sale_price is set
+        if ($validated['sale_price'] && $validated['sale_price'] < $validated['price']) {
+            $validated['discount_percentage'] = round((($validated['price'] - $validated['sale_price']) / $validated['price']) * 100);
+        } else {
+            $validated['discount_percentage'] = 0;
+            $validated['sale_price'] = $validated['sale_price'] ?: $validated['price'];
+        }
+        
         // Handle image uploads
         $images = [];
         if ($request->hasFile('images')) {
             foreach ($request->file('images') as $index => $image) {
-                $base64 = 'data:' . $image->getMimeType() . ';base64,' . base64_encode(file_get_contents($image->getRealPath()));
-                $images[] = [
-                    'type' => $index === 0 ? 'main' : 'gallery',
-                    'base64' => $base64,
-                    'filename' => $image->getClientOriginalName(),
-                    'alt_text' => $validated['name'] . ' - Image ' . ($index + 1),
-                    'display_order' => $index + 1
-                ];
+                $filename = time() . '_' . $index . '.' . $image->getClientOriginalExtension();
+                $image->move(public_path('images/products'), $filename);
+                $images[] = '/images/products/' . $filename;
             }
+        } elseif ($request->hasFile('image')) {
+            // Handle single image upload
+            $image = $request->file('image');
+            $filename = time() . '.' . $image->getClientOriginalExtension();
+            $image->move(public_path('images/products'), $filename);
+            $images[] = '/images/products/' . $filename;
         }
         $validated['images'] = $images;
 
-        // Set defaults
+        // Set defaults and metadata
         $validated['created_at'] = now();
         $validated['updated_at'] = now();
-        $validated['category_id'] = $this->getCategoryId($validated['category']);
+        $validated['rating_average'] = 0.0;
+        $validated['rating_count'] = 0;
+        $validated['views_count'] = 0;
+        $validated['sales_count'] = 0;
+        $validated['weight'] = $validated['weight'] ?? 100;
 
-        MongoDBProduct::create($validated);
-
-        return redirect()->route('admin.products.index')
-            ->with('success', 'Product created successfully!');
+        try {
+            $product = MongoDBProduct::create($validated);
+            
+            return redirect()->route('admin.products.index')
+                ->with('success', 'Product created successfully! ID: ' . $product->_id);
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Failed to create product: ' . $e->getMessage());
+        }
     }
 
     public function show(MongoDBProduct $product)
@@ -84,12 +115,9 @@ class ProductController extends Controller
 
     public function edit(MongoDBProduct $product)
     {
-        $categories = [
-            'beard-care' => 'Beard Care',
-            'skincare' => 'Skincare',
-            'hair-care' => 'Hair Care', 
-            'body-care' => 'Body Care'
-        ];
+        $categories = Category::where('is_active', true)
+            ->orderBy('sort_order')
+            ->get();
         return view('admin.products.edit', compact('product', 'categories'));
     }
 
@@ -149,16 +177,5 @@ class ProductController extends Controller
         $product->delete();
         return redirect()->route('admin.products.index')
             ->with('success', 'Product deleted successfully!');
-    }
-
-    private function getCategoryId($category)
-    {
-        $categoryMap = [
-            'beard-care' => 1,
-            'skincare' => 2,
-            'hair-care' => 3,
-            'body-care' => 4
-        ];
-        return $categoryMap[$category] ?? 1;
     }
 }

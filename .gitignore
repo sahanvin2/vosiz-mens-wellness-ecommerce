@@ -22,3 +22,14 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Testing and Development Files
+/storage/phpstan/
+/tests/reports/
+/tests/screenshots/
+/tests/Browser/screenshots/
+*.tmp
+*.cache
+
+# Deployment Files (keep source but ignore generated files)
+# We keep our deployment configs but ignore temp files

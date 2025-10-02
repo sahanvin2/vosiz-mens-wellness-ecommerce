@@ -2,15 +2,15 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use MongoDB\Laravel\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class MongoProduct extends Model
 {
     use HasFactory;
 
-    protected $connection = 'mysql';
-    protected $table = 'mongo_products';
+    protected $connection = 'mongodb';
+    protected $collection = 'products';  // MongoDB collection name
 
     protected $fillable = [
         '_id',

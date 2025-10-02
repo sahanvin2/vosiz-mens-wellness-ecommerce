@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\MongoDBProduct;
+use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
@@ -35,7 +36,7 @@ class ProductController extends Controller
 
             // Category filter
             if ($request->filled('category')) {
-                $query->where('category', $request->category);
+                $query->where('category_name', $request->category);
             }
 
             // Price range filter
@@ -68,18 +69,10 @@ class ProductController extends Controller
 
             $products = $query->paginate(12);
             
-            // Get available categories for filter
-            $allProducts = MongoDBProduct::whereNotNull('category')->get();
-            $categoryNames = $allProducts->pluck('category')->unique()->filter()->sort();
-                
-            // Create category objects for the view
-            $categories = $categoryNames->map(function($categoryName) {
-                return (object) [
-                    'id' => $categoryName,
-                    'name' => ucfirst(str_replace('-', ' ', $categoryName)),
-                    'slug' => $categoryName
-                ];
-            });
+            // Get categories from MySQL for the dropdown
+            $categories = Category::where('is_active', true)
+                ->orderBy('sort_order', 'asc')
+                ->get();
 
         } catch (\Exception $e) {
             // MongoDB connection failed - show error page with fallback
@@ -140,7 +133,7 @@ class ProductController extends Controller
         }
 
         // Get related products
-        $relatedProducts = MongoDBProduct::where('category', $product->category)
+        $relatedProducts = MongoDBProduct::where('category_name', $product->category_name)
             ->where('_id', '!=', $product->_id)
             ->where(function($q) {
                 $q->where('is_active', true)
@@ -157,9 +150,9 @@ class ProductController extends Controller
      */
     public function category($category)
     {
-        $products = MongoDBProduct::where('category', $category)
+        $products = MongoDBProduct::where('category_name', $category)
             ->where('is_active', true)
-            ->orderBy('sort_order', 'asc')
+            ->orderBy('created_at', 'desc')
             ->paginate(12);
 
         $categoryName = ucfirst(str_replace('-', ' ', $category));

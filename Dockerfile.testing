@@ -1,0 +1,58 @@
+FROM php:8.2-fpm
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \\
+    git \\
+    curl \\
+    libpng-dev \\
+    libonig-dev \\
+    libxml2-dev \\
+    zip \\
+    unzip \\
+    nodejs \\
+    npm \\
+    sqlite3 \\
+    libsqlite3-dev \\
+    wget \\
+    gnupg \\
+    && apt-get clean
+
+# Install PHP extensions
+RUN docker-php-ext-install pdo_sqlite pdo_mysql mbstring exif pcntl bcmath gd
+
+# Install MongoDB PHP extension
+RUN pecl install mongodb && docker-php-ext-enable mongodb
+
+# Install Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Install Chrome for Selenium testing
+RUN wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \\
+    && echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list \\
+    && apt-get update \\
+    && apt-get install -y google-chrome-stable
+
+# Set working directory
+WORKDIR /var/www/html
+
+# Copy application files
+COPY . .
+
+# Install PHP dependencies
+RUN composer install --dev --no-interaction --optimize-autoloader
+
+# Install Node.js dependencies
+RUN npm ci && npm run build
+
+# Create necessary directories
+RUN mkdir -p tests/reports tests/screenshots storage/logs \\
+    && chmod -R 775 storage bootstrap/cache tests
+
+# Set proper permissions
+RUN chown -R www-data:www-data /var/www/html
+
+# Expose port
+EXPOSE 8000
+
+# Default command
+CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
