@@ -441,10 +441,9 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
     Route::delete('/suppliers/{supplier}', [App\Http\Controllers\AdminDashboardController::class, 'deleteSupplier'])->name('suppliers.delete');
     
     // Product Management Routes
-    // Product management routes have been migrated to a dedicated resource controller
-    // to avoid duplicate route names. See the resource registration later in this
-    // file which uses App\Http\Controllers\Admin\AdminProductController::class
-    // Route::resource('products', Admin\AdminProductController::class);
+    // Product Management Routes (centralized)
+    Route::resource('products', App\Http\Controllers\Admin\AdminProductController::class);
+    Route::delete('/products/{id}/image', [App\Http\Controllers\Admin\AdminProductController::class, 'removeImage'])->name('products.remove-image');
     
     // API Token Management Routes
     Route::get('/api/tokens', [App\Http\Controllers\AdminDashboardController::class, 'apiTokens'])->name('api.tokens');
@@ -489,12 +488,7 @@ Route::prefix('shop')->name('shop.')->group(function () {
     });
 });
 
-// Admin Product Management Routes
-Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified', 'admin'])->prefix('admin')->name('admin.')->group(function () {
-    // Add these new product management routes
-    Route::resource('products', App\Http\Controllers\Admin\AdminProductController::class);
-    Route::delete('/products/{id}/image', [App\Http\Controllers\Admin\AdminProductController::class, 'removeImage'])->name('products.remove-image');
-});
+// Admin product management is registered in the main admin group above.
 
 // Supplier Routes
 Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified', 'supplier'])->prefix('supplier')->name('supplier.')->group(function () {
